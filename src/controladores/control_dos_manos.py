@@ -8,53 +8,53 @@ import math
 import time
 from pynput.keyboard import Controller, Key
 
-# Inicializar el controlador de teclado
+# Initialize keyboard controller
 keyboard = Controller()
 
-# Inicializar MediaPipe
+# Initialize MediaPipe
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False,
-    max_num_hands=2,  # Detectamos dos manos
+    max_num_hands=2,  # Detecting two hands
     min_detection_confidence=0.7,
     min_tracking_confidence=0.7
 )
 mp_draw = mp.solutions.drawing_utils
 
-# Configurar la cámara
+# Setup camera
 cap = cv2.VideoCapture(0)
 screen_width, screen_height = pyautogui.size()
 pyautogui.FAILSAFE = False
 
-# Obtener dimensiones de la cámara
+# Get camera dimensions
 cam_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 cam_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-# Variables para suavizado del movimiento
-smoothening = 7
-prev_x, prev_y = 0, 0
-curr_x, curr_y = 0, 0
+# Define dead zone (in pixels)
+dead_zone = 15
 
-# Variables para el estado de los dedos
+# Variables for finger states
 pulgar = True
 indice = True
 medio = True
 anular = True
 meñique = True
 
-# Variables para el estado de las teclas
+# Variables for key states
 tecla_space_presionada = False
 tecla_r_presionada = False
 tecla_e_presionada = False
 tecla_w_presionada = False
 tecla_a_presionada = False
 
-# Variables para el estado de los clicks
+# Variables for click states
 click_presionado = False
 click_derecho_presionado = False
 
 def move_mouse(x, y):
-    win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(x), int(y), 0, 0)
+    # Only move if outside dead zone
+    if abs(x) > dead_zone or abs(y) > dead_zone:
+        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(x), int(y), 0, 0)
 
 def click_izquierdo(presionar):
     if presionar:
@@ -73,15 +73,15 @@ while True:
     if not success:
         continue
         
-    # Voltear la imagen horizontalmente para efecto espejo
+    # Flip image horizontally for mirror effect
     img = cv2.flip(img, 1)
     
-    # Convertir a RGB para MediaPipe
+    # Convert to RGB for MediaPipe
     imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     results = hands.process(imgRGB)
     
     if results.multi_hand_landmarks:
-        # Determinar qué mano es izquierda y cuál es derecha
+        # Determine which hand is left and which is right
         mano_izquierda = None
         mano_derecha = None
         
@@ -91,34 +91,37 @@ while True:
             else:
                 mano_derecha = results.multi_hand_landmarks[idx]
 
-        # Procesar mano del mouse (derecha)
+        # Process mouse hand (right)
         if mano_derecha:
             mp_draw.draw_landmarks(img, mano_derecha, mp_hands.HAND_CONNECTIONS)
             
-            # Control del mouse con el dedo índice
-            index_finger = mano_derecha.landmark[8]
+            # Get palm position (landmark 0)
+            palm = mano_derecha.landmark[0]
+            x = int(palm.x * cam_width)
+            y = int(palm.y * cam_height)
             
-            x = int(index_finger.x * cam_width)
-            y = int(index_finger.y * cam_height)
+            # Calculate displacement from center
+            dx = x - int(cam_width/2)
+            dy = y - int(cam_height/2)
             
-            screen_x = np.interp(x, (0, cam_width), (0, screen_width))
-            screen_y = np.interp(y, (0, cam_height), (0, screen_height))
+            # Move mouse and draw reference points
+            move_mouse(dx, dy)
             
-            curr_x = prev_x + (screen_x - prev_x) / smoothening
-            curr_y = prev_y + (screen_y - prev_y) / smoothening
-            
-            move_mouse(curr_x - prev_x, curr_y - prev_y)
-            
-            prev_x, prev_y = curr_x, curr_y
+            # Draw green point (palm) and dead zone
+            cv2.circle(img, (x, y), 10, (0, 255, 0), cv2.FILLED)
+            cv2.rectangle(img, 
+                         (int(cam_width/2) - dead_zone, int(cam_height/2) - dead_zone),
+                         (int(cam_width/2) + dead_zone, int(cam_height/2) + dead_zone),
+                         (255, 0, 0), 2)
 
-            # Detectar gestos para clicks
+            # Detect gestures for clicks
             meñique_y = mano_derecha.landmark[20].y
             anular_y = mano_derecha.landmark[16].y
             
             meñique_arriba = meñique_y < mano_derecha.landmark[19].y
             anular_arriba = anular_y < mano_derecha.landmark[15].y
 
-            # Click derecho - cuando el índice está abajo
+            # Right click - when pinky is down
             if not meñique_arriba and not click_derecho_presionado:
                 click_derecho(True)
                 click_derecho_presionado = True
@@ -126,7 +129,7 @@ while True:
                 click_derecho(False)
                 click_derecho_presionado = False
 
-            # Click izquierdo - cuando el anular está abajo
+            # Left click - when ring finger is down
             if not anular_arriba and not click_presionado:
                 click_izquierdo(True)
                 click_presionado = True
@@ -134,9 +137,7 @@ while True:
                 click_izquierdo(False)
                 click_presionado = False
 
-            cv2.circle(img, (x, y), 10, (0, 255, 0), cv2.FILLED)
-
-        # Procesar mano de teclas (izquierda)
+        # Process key hand (left)
         if mano_izquierda:
             mp_draw.draw_landmarks(img, mano_izquierda, mp_hands.HAND_CONNECTIONS)
             
@@ -146,7 +147,7 @@ while True:
                 cord_x, cord_y = int(punto.x * ancho), int(punto.y * alto)
                 coordenadas[id] = {"x": cord_x, "y": cord_y}
 
-            # Calcular distancias
+            # Calculate distances
             distance_lm4_lm17 = math.hypot(
                 coordenadas[17]["x"] - coordenadas[4]["x"],
                 coordenadas[17]["y"] - coordenadas[4]["y"]
@@ -168,8 +169,8 @@ while True:
                 coordenadas[20]["y"] - coordenadas[17]["y"]
             )
 
-            # Control de teclas
-            # Pulgar - Espacio
+            # Key controls remain the same
+            # Thumb - Space
             if distance_lm4_lm17 < 80 and pulgar:
                 pulgar = False
                 keyboard.press(Key.space)
@@ -180,7 +181,7 @@ while True:
                     keyboard.release(Key.space)
                     tecla_space_presionada = False
 
-            # Índice - R
+            # Index - R
             if distance_lm5_lm8 < 30 and indice:
                 indice = False
                 keyboard.press('r')
@@ -191,7 +192,7 @@ while True:
                     keyboard.release('r')
                     tecla_r_presionada = False
 
-            # Medio - E
+            # Middle - E
             if distance_lm9_lm12 < 30 and medio:
                 medio = False
                 keyboard.press('e')
@@ -202,7 +203,7 @@ while True:
                     keyboard.release('e')
                     tecla_e_presionada = False
 
-            # Anular - W
+            # Ring - W
             if distance_lm13_lm16 < 30 and anular:
                 anular = False
                 keyboard.press('w')
@@ -213,7 +214,7 @@ while True:
                     keyboard.release('w')
                     tecla_w_presionada = False
 
-            # Meñique - A
+            # Pinky - A
             if distance_lm17_lm20 < 30 and meñique:
                 meñique = False
                 keyboard.press('a')
@@ -224,7 +225,7 @@ while True:
                     keyboard.release('a')
                     tecla_a_presionada = False
     else:
-        # Si no se detectan manos, liberar todas las teclas y clicks
+        # Release all keys and clicks if no hands detected
         if tecla_space_presionada:
             keyboard.release(Key.space)
             tecla_space_presionada = False
@@ -247,12 +248,12 @@ while True:
             click_derecho(False)
             click_derecho_presionado = False
     
-    # Mostrar imagen
+    # Show image
     cv2.imshow("Hand Tracking", img)
     
-    # Salir con la tecla 'q'
+    # Exit with 'ESC' key
     if cv2.waitKey(1) & 0xFF == 27:
-        # Liberar todas las teclas y clicks antes de salir
+        # Release all keys and clicks before exiting
         keyboard.release(Key.space)
         keyboard.release('r')
         keyboard.release('e')
