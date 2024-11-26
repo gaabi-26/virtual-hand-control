@@ -30,11 +30,6 @@ pyautogui.FAILSAFE = False
 cam_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 cam_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 
-# Variables para suavizado del movimiento (opcional)
-smoothening = 7
-prev_x, prev_y = 0, 0
-curr_x, curr_y = 0, 0
-
 # Variables para el estado de los dedos
 pulgar = True
 indice = True
@@ -53,8 +48,12 @@ tecla_a_presionada = False
 click_presionado = False
 click_derecho_presionado = False
 
+# Centro
+center_point = 20
+
 def move_mouse(x, y):
-    win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(x), int(y), 0, 0)
+    if abs(x) > center_point or abs(y) > center_point:
+        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(x), int(y), 0, 0)
 
 def click_izquierdo(presionar):
     if presionar:
@@ -73,9 +72,6 @@ while True:
     success, img = cap.read()
     if not success:
         continue
-        
-    # Volteamos la imagen efecto espejo
-    img = cv2.flip(img, 1)
     
     # Convertimos a RGB para que trabaje con MediaPipe
     imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -85,47 +81,48 @@ while True:
         # Procesamos la mano detectada
         mano = results.multi_hand_landmarks[0]
         mp_draw.draw_landmarks(img, mano, mp_hands.HAND_CONNECTIONS)
-        
-        # --------------- Control del mouse con el dedo índice ---------------
-        index_palma = mano.landmark[0]
-        
-        x = int(index_palma.x * cam_width)
-        y = int(index_palma.y * cam_height)
-        
-        screen_x = np.interp(x, (0, cam_width), (0, screen_width))
-        screen_y = np.interp(y, (0, cam_height), (0, screen_height))
-        
-        curr_x = prev_x + (screen_x - prev_x) / smoothening
-        curr_y = prev_y + (screen_y - prev_y) / smoothening
-        
-        move_mouse(curr_x - prev_x, curr_y - prev_y)
-        
-        prev_x, prev_y = curr_x, curr_y
 
+
+        # --------------- Control del mouse con la palma de la mano ---------------
+
+        # Obtenemos posición de la palma (punto de referencia 0)
+        palm = mano.landmark[0]
+        x = int(palm.x * cam_width)
+        y = int(palm.y * cam_height)
+            
+        # Calculamos desplazamiento desde el centro
+        dx = x - int(cam_width/2)
+        dy = y - int(cam_height/2)
+            
+        # Movemos el mouse y dibujamos puntos de referencia
+        move_mouse(dx, dy)
+            
+        # Dibujar punto verde (palma) y zona muerta
+        cv2.circle(img, (x, y), 10, (0, 255, 0), cv2.FILLED)
+        cv2.rectangle(img, (int(cam_width/2) - center_point, int(cam_height/2) - center_point),
+                    (int(cam_width/2) + center_point, int(cam_height/2) + center_point), (255, 255, 0), 2)
 
 
         # --------------- Detectamos gestos para clicks ---------------
-        distancia_camara = mano.landmark[8].z 
+        distancia_camara = mano.landmark[8].z
         
         # Click derecho - cuando la mano se aleja a la cámara
-        # Usamos la distancia del índice a la cámara como referencia       
-        if distancia_camara > -0.05 and not click_derecho_presionado:   # El valor de 0.05 se ajusta a preferencia de distancia
+        # Usamos la distancia del indice a la cámara como referencia       
+        if distancia_camara > -0.06 and not click_derecho_presionado:   # El valor de 0.05 se ajusta a preferencia de distancia
             click_derecho(True)
             click_derecho_presionado = True
-        elif distancia_camara <= -0.05 and click_derecho_presionado:
+        elif distancia_camara <= -0.06 and click_derecho_presionado:
             click_derecho(False)
             click_derecho_presionado = False
 
         # Click izquierdo - cuando la mano se acerca a la cámara
-        # Usamos la distancia del índice a la cámara como referencia
+        # Usamos la distancia del indice a la cámara como referencia
         if distancia_camara < -0.1 and not click_presionado:
             click_izquierdo(True)
             click_presionado = True
         elif distancia_camara >= -0.1 and click_presionado:
             click_izquierdo(False)
             click_presionado = False
-
-        cv2.circle(img, (x, y), 10, (0, 255, 0), cv2.FILLED)
 
 
         # Control de teclas
@@ -253,12 +250,6 @@ while True:
         if click_derecho_presionado:
             click_derecho(False)
         break
-    pyautogui.FAILSAFE = False
-    x, y = pyautogui.position()
-    while x > 1200:
-        x, y = pyautogui.position()
-        #if pyautogui.onScreen(x + 10, y + 10):
-        pyautogui.move(10, 0)
 
 
 cap.release()
