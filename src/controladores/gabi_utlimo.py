@@ -51,6 +51,10 @@ tecla_a_presionada = False
 click_presionado = False
 click_derecho_presionado = False
 
+def calcular_distancia(punto1, punto2):
+    """Calcular distancia euclidiana entre dos puntos"""
+    return math.sqrt((punto1['x'] - punto2['x'])**2 + (punto1['y'] - punto2['y'])**2)
+
 def move_mouse(x, y):
     # Mover el mouse solo si está fuera de la zona muerta
     if abs(x) > dead_zone or abs(y) > dead_zone:
@@ -93,12 +97,10 @@ while True:
             else:
                 mano_derecha = results.multi_hand_landmarks[idx]
 
-        # Procesar la mano del mouse (derecha)
-        if mano_derecha:
-            mp_draw.draw_landmarks(img, mano_derecha, mp_hands.HAND_CONNECTIONS)
-            
+        # Procesar la mano del mouse (palma de la mano izquierda)
+        if mano_izquierda:
             # Obtener posición de la palma (punto de referencia 0)
-            palm = mano_derecha.landmark[0]
+            palm = mano_izquierda.landmark[0]
             x = int(palm.x * cam_width)
             y = int(palm.y * cam_height)
             
@@ -116,31 +118,7 @@ while True:
                          (int(cam_width/2) + dead_zone, int(cam_height/2) + dead_zone),
                          (255, 0, 0), 2)
 
-            # Detectar gestos para clicks
-            meñique_y = mano_derecha.landmark[20].y
-            anular_y = mano_derecha.landmark[16].y
-            
-            meñique_arriba = meñique_y < mano_derecha.landmark[18].y
-            anular_arriba = anular_y < mano_derecha.landmark[14].y
-
-            # Click derecho - cuando el meñique está abajo
-            if not meñique_arriba and not click_derecho_presionado:
-                click_derecho(True)
-                click_derecho_presionado = True
-            elif meñique_arriba and click_derecho_presionado:
-                click_derecho(False)
-                click_derecho_presionado = False
-
-            # Click izquierdo - cuando el anular está abajo
-            if not anular_arriba and not click_presionado:
-                click_izquierdo(True)
-                click_presionado = True
-            elif anular_arriba and click_presionado:
-                click_izquierdo(False)
-                click_presionado = False
-
-        # Procesar la mano de las teclas (izquierda)
-        if mano_izquierda:
+            # Dibujar landmarks (como estaba originalmente en la mano izquierda)
             mp_draw.draw_landmarks(img, mano_izquierda, mp_hands.HAND_CONNECTIONS)
             
             # Obtener coordenadas de los puntos de la mano
@@ -149,7 +127,7 @@ while True:
                 alto, ancho, _ = img.shape
                 cord_x, cord_y = int(punto.x * ancho), int(punto.y * alto)
                 coordenadas[id] = {"x": cord_x, "y": cord_y}
-
+            
             # Control de teclas según la posición de los dedos
             # Pulgar - Tecla Espacio
             if coordenadas[4]["x"] < coordenadas[2]["x"] and pulgar:
@@ -205,6 +183,51 @@ while True:
                 if tecla_a_presionada:
                     keyboard.release('a')
                     tecla_a_presionada = False
+
+        # Procesar la mano de clicks (mano derecha)
+        if mano_derecha:
+            # Obtener coordenadas de los puntos de la mano
+            coordenadas = {}
+            for id, punto in enumerate(mano_derecha.landmark):
+                alto, ancho, _ = img.shape
+                cord_x, cord_y = int(punto.x * ancho), int(punto.y * alto)
+                coordenadas[id] = {"x": cord_x, "y": cord_y}
+            
+            # Calcular distancias para clicks
+            distancia_click_izq = calcular_distancia(coordenadas[4], coordenadas[8])
+            distancia_click_der = calcular_distancia(coordenadas[4], coordenadas[20])
+            
+            # Dibujar líneas de distancia como en el código original
+            cv2.line(img, 
+                     (coordenadas[4]['x'], coordenadas[4]['y']), 
+                     (coordenadas[8]['x'], coordenadas[8]['y']), 
+                     (0, 255, 0), 2)  # Línea verde para pulgar-índice
+            
+            cv2.line(img, 
+                     (coordenadas[4]['x'], coordenadas[4]['y']), 
+                     (coordenadas[20]['x'], coordenadas[20]['y']), 
+                     (0, 0, 255), 2)  # Línea roja para pulgar-meñique
+            
+            # Dibujar landmarks específicos
+            cv2.circle(img, (coordenadas[4]['x'], coordenadas[4]['y']), 5, (255, 0, 0), cv2.FILLED)  # Pulgar
+            cv2.circle(img, (coordenadas[8]['x'], coordenadas[8]['y']), 5, (255, 0, 0), cv2.FILLED)  # Índice
+            cv2.circle(img, (coordenadas[20]['x'], coordenadas[20]['y']), 5, (255, 0, 0), cv2.FILLED)  # Meñique
+
+            # Click izquierdo - cuando la distancia entre pulgar e índice es menor a 40
+            if distancia_click_izq < 40 and not click_presionado:
+                click_izquierdo(True)
+                click_presionado = True
+            elif distancia_click_izq >= 40 and click_presionado:
+                click_izquierdo(False)
+                click_presionado = False
+
+            # Click derecho - cuando la distancia entre pulgar y meñique es menor a 30
+            if distancia_click_der < 30 and not click_derecho_presionado:
+                click_derecho(True)
+                click_derecho_presionado = True
+            elif distancia_click_der >= 30 and click_derecho_presionado:
+                click_derecho(False)
+                click_derecho_presionado = False
     else:
         # Liberar todas las teclas y clicks si no se detectan manos
         if tecla_space_presionada:
