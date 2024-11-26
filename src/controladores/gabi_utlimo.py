@@ -130,11 +130,12 @@ while True:
             
             # Control de teclas según la posición de los dedos
             # Pulgar - Tecla Espacio
-            if coordenadas[4]["x"] < coordenadas[2]["x"] and pulgar:
+            distancia_4_9 = calcular_distancia(coordenadas[4], coordenadas[9])
+            if distancia_4_9 < 40 and pulgar:
                 pulgar = False
                 keyboard.press(Key.space)
                 tecla_space_presionada = True 
-            elif coordenadas[4]["x"] > coordenadas[2]["x"] and not pulgar:
+            elif distancia_4_9 > 40 and not pulgar:
                 pulgar = True
                 if tecla_space_presionada:
                     keyboard.release(Key.space)
