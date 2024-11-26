@@ -23,8 +23,8 @@ st.write("")
 ### Adelanto de nuestro proyecto📷
     
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplo_mano_juego.jpg?raw=true", caption="Esta es una imagen de como funciona el detector de manos", use_container_width=True)
-st.image("d:\\usuario\\Desktop\\68747470733a2f2f6d65646961706970652e6465762f696d616765732f6d6f62696c652f68616e645f6c616e646d61726b732e706e67.png", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
-st.image("d:\\usuario\\Desktop\\68747470733a2f2f6d65646961706970652e6465762f696d616765732f6d6f62696c652f68616e645f63726f70732e706e67.png", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
+st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/landmarks.png?raw=true", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
+st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplos_manos.png?raw=true", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplo_juego.jpg?raw=true", caption="Esta es una imagen del juego", use_container_width=True)
 st.video("https://www.youtube.com/watch?v=ZO10bAn_8M8", start_time=0)
 
