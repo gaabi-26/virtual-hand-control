@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import os 
 import subprocess
 import requests
+from PIL import Image
 
 # Título de la página, con descripcion breve
 st.markdown(
@@ -21,11 +24,14 @@ st.write("")
 st.write("")
    
 ### Adelanto de nuestro proyecto📷
-    
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplo_mano_juego.jpg?raw=true", caption="Esta es una imagen de como funciona el detector de manos", use_container_width=True)
+
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/landmarks.png?raw=true", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
+
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplos_manos.png?raw=true", caption="Esta es una imagen del funcionamiento el detector de manos", use_container_width=True)
+
 st.image("https://github.com/gaabi-26/virtual-hand-control/blob/main/img/ejemplo_juego.jpg?raw=true", caption="Esta es una imagen del juego", use_container_width=True)
+
 st.video("https://www.youtube.com/watch?v=ZO10bAn_8M8", start_time=0)
 
 
@@ -98,7 +104,7 @@ url_dos_manos = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control
 
 # Boton para ejecutar los juegos
 if opcion == "Inicio":
-    st.write("Seleccione un modo del menú desplegable para comenzar.")
+    st.write("")
 
 elif opcion == "Control con 1 mano":
     st.write("")
@@ -110,8 +116,33 @@ elif opcion == "Control con 1 mano":
     else:
         st.text_area("Contenido del script", contenido, height=300)
         if st.button("Boton para ejecutar el juego con 1 mano"):
-            st.write("Ejecutando script para control con 1 mano...")
-            ejecutar_script(contenido)
+            url1 = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_una_mano.py"
+            with st.spinner('Ejecutando el script...'):
+                try:
+                    response = requests.get(url1) #Descarga el script mediante el url de git
+                    response.raise_for_status() #Verifica que se haya descargado bien
+                    script_path = "Control con 1 mano"
+
+                    with open(script_path, "w", encoding="utf-8") as script_file:
+                        script_file.write(response.text) # Guarda el script temporalmente con codificacion UTF-8 (como á, é, o ñ) que no estan codificados
+
+                    # Ejecutar el script y capturar la salida
+                    proceso = subprocess.run(
+                    ['python', script_path],
+                    capture_output=True,
+                    text=True
+                    )
+                    # Mostrar la salida o los errores en la pantalla
+                    if proceso.returncode == 0:
+                        st.success("¡El script se ejecutó correctamente!")
+                        st.text("Salida del script:")
+                        st.code(proceso.stdout)  # Muestra la salida del script
+                    else:
+                        st.error("Hubo un error al ejecutar el script.")
+                        st.text("Error:")
+                        st.code(proceso.stderr)  # Muestra el error del script
+                except Exception as e:
+                    st.error(f"Error inesperado: {e}")
 
 elif opcion == "Control con 2 manos":
     st.write("")
@@ -123,9 +154,28 @@ elif opcion == "Control con 2 manos":
     else:
         st.text_area("Contenido del script", contenido, height=300)
         if st.button("Boton para ejecutar el juego con 2 manos"):
-            st.write("Ejecutando script para control con 2 manos...")
-            ejecutar_script(contenido)
+            url2 = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_dos_manos.py"
+            with st.spinner('Ejecutando el script...'):
+                try:
+                    response = requests.get(url2)
+                    response.raise_for_status()
+                    script_path = "Control con 2 mano"
+                    with open(script_path, "w", encoding="utf-8") as script_file:
+                        script_file.write(response.text)
 
-
-
-
+                    proceso = subprocess.run(
+                    ['python', script_path],
+                    capture_output=True,
+                    text=True
+                    )
+                   
+                    if proceso.returncode == 0:
+                        st.success("¡El script se ejecutó correctamente!")
+                        st.text("Salida del script:")
+                        st.code(proceso.stdout)  
+                    else:
+                        st.error("Hubo un error al ejecutar el script.")
+                        st.text("Error:")
+                        st.code(proceso.stderr)  
+                except Exception as e:
+                    st.error(f"Error inesperado: {e}")
