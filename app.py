@@ -52,7 +52,7 @@ st.markdown(
         </ul>
     </ul>
     """,
-unsafe_allow_html=True
+unsafe_allow_html=True #El true es para incluir codigo HTML 
 )
 
 # Requisitos
@@ -76,106 +76,3 @@ st.markdown(
 unsafe_allow_html=True
 )
 
-# Función para descargar el contenido del script desde la URL
-def obtener_contenido_script(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    else:
-        return "Error al descargar el script."
-
-# Función para ejecutar el script descargado
-def ejecutar_script(contenido):
-    with open("temp_script.py", "w") as file:
-        file.write(contenido)
-    os.system("python temp_script.py")
-
-# Menú de selección
-st.write("")
-st.write("")
-opcion = st.selectbox(
-    "Seleccione el script que desea utilizar:",
-    ("Inicio", "Control con 1 mano", "Control con 2 manos")
-)
-
-# URLs de los scripts
-url_una_mano = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_una_mano.py"
-url_dos_manos = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_dos_manos.py"
-
-# Boton para ejecutar los juegos
-if opcion == "Inicio":
-    st.write("")
-
-elif opcion == "Control con 1 mano":
-    st.write("")
-    st.write("Este botón permite interactuar con la aplicación usando solo los movimientos de una mano, gracias a un sistema de seguimiento de gestos. Al realizar un gesto con la mano (como cerrar el dedo índice o levantar el pulgar), se activa el botón sin necesidad de hacer clic físico. Es una forma innovadora y accesible de controlar la interfaz con el movimiento natural de las manos, mejorando la interacción y la experiencia del usuario.")
-    contenido = obtener_contenido_script(url_una_mano)
-    
-    if "Error" in contenido:
-        st.error("No se pudo cargar el script.")
-    else:
-        st.text_area("Contenido del script", contenido, height=300)
-        if st.button("Boton para ejecutar el juego con 1 mano"):
-            url1 = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_una_mano.py"
-            with st.spinner('Ejecutando el script...'):
-                try:
-                    response = requests.get(url1) #Descarga el script mediante el url de git
-                    response.raise_for_status() #Verifica que se haya descargado bien
-                    script_path = "Control con 1 mano"
-
-                    with open(script_path, "w", encoding="utf-8") as script_file:
-                        script_file.write(response.text) # Guarda el script temporalmente con codificacion UTF-8 (como á, é, o ñ) que no estan codificados
-
-                    # Ejecutar el script y capturar la salida
-                    proceso = subprocess.run(
-                    ['python', script_path],
-                    capture_output=True,
-                    text=True
-                    )
-                    # Mostrar la salida o los errores en la pantalla
-                    if proceso.returncode == 0:
-                        st.success("¡El script se ejecutó correctamente!")
-                        st.text("Salida del script:")
-                        st.code(proceso.stdout)  # Muestra la salida del script
-                    else:
-                        st.error("Hubo un error al ejecutar el script.")
-                        st.text("Error:")
-                        st.code(proceso.stderr)  # Muestra el error del script
-                except Exception as e:
-                    st.error(f"Error inesperado: {e}")
-
-elif opcion == "Control con 2 manos":
-    st.write("")
-    st.write("Este botón utiliza el seguimiento de gestos de ambas manos para interactuar con la aplicación. Al realizar movimientos específicos con las dos manos, como abrir o cerrar ciertos dedos, se activa el botón sin necesidad de hacer clic físico. Este sistema mejora la interacción, ofreciendo una experiencia más intuitiva y accesible al permitir controlar la interfaz con los gestos naturales de ambas manos.")
-    contenido = obtener_contenido_script(url_dos_manos)
-    
-    if "Error" in contenido:
-        st.error("No se pudo cargar el script.")
-    else:
-        st.text_area("Contenido del script", contenido, height=300)
-        if st.button("Boton para ejecutar el juego con 2 manos"):
-            url2 = "https://raw.githubusercontent.com/gaabi-26/virtual-hand-control/refs/heads/main/src/control_dos_manos.py"
-            with st.spinner('Ejecutando el script...'):
-                try:
-                    response = requests.get(url2)
-                    response.raise_for_status()
-                    script_path = "Control con 2 mano"
-                    with open(script_path, "w", encoding="utf-8") as script_file:
-                        script_file.write(response.text)
-
-                    proceso = subprocess.run(
-                    ['python', script_path],
-                    capture_output=True,
-                    text=True
-                    )
-                   
-                    if proceso.returncode == 0:
-                        st.success("¡El script se ejecutó correctamente!")
-                        st.text("Salida del script:")
-                        st.code(proceso.stdout)  
-                    else:
-                        st.error("Hubo un error al ejecutar el script.")
-                        st.text("Error:")
-                        st.code(proceso.stderr)  
-                except Exception as e:
-                    st.error(f"Error inesperado: {e}")
